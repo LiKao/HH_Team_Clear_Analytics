@@ -9,13 +9,9 @@ library(rgdal)
 
 IMAGE_DIR      <- "images/"
 NYC_CORD       <- c(lon = -73.95, lat = 40.7)
-NYC_PATH_CORD  <- c(lon = -74, lat = 40.75)
 NYC_ZOOM       <- 10
 NYC_PATH_ZOOM  <- 12
-# Not sure how to determine this automatically, so we have to keep it manually
-# Ugly, but may be changed later
-NYC_PATH_XLIM  <- c(-74.1,-73.9)
-NYC_PATH_YLIM  <- c(40.68,40.82)
+BBOX_FACTOR    <- 2.5
 MAP_STYLE      <- c(feature = "all", element = "labels", visibility = "off")
 MAP_TYPE       <- "satellite"
 HEATMAP_COLORS <- c("yellow","red")
@@ -84,7 +80,31 @@ ggmap(NYCmap) +
 ggsave(paste0(IMAGE_DIR, "Heatmap_NYC_Full_No_Path.jpg"))
 
 # retrieve the movement path
-path <- readOGR("./path/","doc-line") %>% spTransform(CRS("+proj=longlat +datum=WGS84"))
+path <- readOGR("./path/","polylines9") %>% spTransform(CRS("+proj=longlat +datum=WGS84"))
+
+bbox <- list(
+  xlim = c(
+    min(path@lines[[1]]@Lines[[1]]@coords[,1]),
+    max(path@lines[[1]]@Lines[[1]]@coords[,1])),
+  ylim = c(
+    min(path@lines[[1]]@Lines[[1]]@coords[,2]),
+    max(path@lines[[1]]@Lines[[1]]@coords[,2]))
+  )
+
+path.center <- c(mean(bbox$xlim),mean(bbox$ylim))
+
+# stretch the bounding box to the required size
+bbox <- list(
+  xlim = c(
+    path.center[1]-(path.center[1]-bbox$xlim[1])*BBOX_FACTOR,
+    path.center[1]+(bbox$xlim[2]-path.center[1])*BBOX_FACTOR),
+  ylim = c(
+    path.center[2]-(path.center[2]-bbox$ylim[1])*BBOX_FACTOR,
+    path.center[2]+(bbox$ylim[2]-path.center[2])*BBOX_FACTOR
+  )
+)
+
+
 
 # Full heatmap with overlay and movement path
 ggmap(NYCmap) +
@@ -105,12 +125,12 @@ ggplot(data=path, aes(long, lat), color="blue", width=3) +
   theme(legend.position = "none") +
   scale_x_continuous(name="",breaks = NULL) +
   scale_y_continuous(name="",breaks = NULL) +
-  coord_equal(xlim = NYC_PATH_XLIM, ylim = NYC_PATH_YLIM)
+  coord_equal(xlim = bbox$xlim, ylim = bbox$ylim)
 ggsave(paste0(IMAGE_DIR,"Path_only.png"))
 
 # Detailed view of the path
 
-NYCmap.path = get_googlemap( NYC_PATH_CORD, zoom = NYC_PATH_ZOOM, style = MAP_STYLE, maptype = MAP_TYPE)
+NYCmap.path = get_googlemap( path.center, zoom = NYC_PATH_ZOOM, style = MAP_STYLE, maptype = MAP_TYPE)
 ggmap(NYCmap.path)
 
 # Detailed heatmap data without overlay, PNG for alpha channel
@@ -122,7 +142,7 @@ ggplot(df.cases.rastered, aes(long, lat, group = group, fill = Positive, alpha =
   theme(legend.position = "none") +
   scale_x_continuous(name="",breaks = NULL) +
   scale_y_continuous(name="",breaks = NULL) +
-  coord_equal(xlim = NYC_PATH_XLIM, ylim = NYC_PATH_YLIM)
+  coord_equal(xlim = bbox$xlim, ylim = bbox$ylim)
 ggsave(paste0(IMAGE_DIR,"Heatmap_NYC_Detailed_No_Overlay_With_Alpha.png"))
 
 # Detailed heatmap with overlay
@@ -134,7 +154,7 @@ ggmap(NYCmap.path) +
   theme(legend.position = "none") +
   scale_x_continuous(name="",breaks = NULL) +
   scale_y_continuous(name="",breaks = NULL) +
-  coord_equal(xlim = NYC_PATH_XLIM, ylim = NYC_PATH_YLIM)
+  coord_equal(xlim = bbox$xlim, ylim = bbox$ylim)
 ggsave(paste0(IMAGE_DIR,"Heatmap_NYC_Detailed_No_Path.jpg"))
 
 # Detailed heatmap with overlay and path
@@ -147,5 +167,5 @@ ggmap(NYCmap.path) +
   theme(legend.position = "none") +
   scale_x_continuous(name="",breaks = NULL) +
   scale_y_continuous(name="",breaks = NULL) +
-  coord_equal(xlim = NYC_PATH_XLIM, ylim = NYC_PATH_YLIM)
+  coord_equal(xlim = bbox$xlim, ylim = bbox$ylim)
 ggsave(paste0(IMAGE_DIR,"Heatmap_NYC_Detailed_With_Path.jpg"))
