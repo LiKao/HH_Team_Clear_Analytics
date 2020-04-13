@@ -160,7 +160,7 @@ ggsave(paste0(IMAGE_DIR,"Heatmap_NYC_Detailed_No_Path.jpg"))
 # Detailed heatmap with overlay and path
 ggmap(NYCmap.path) +
   geom_polygon(data=df.cases.rastered, aes(long, lat, group=group, fill=Positive, alpha=alpha)) +
-  geom_path(data=path, aes(long, lat), color="blue", size=1.5) +
+  geom_path(data=path, aes(long, lat), color="blue", size=1) +
   scale_fill_gradientn(colors = HEATMAP_COLORS) +
   scale_alpha_continuous(range=c(0, ALPHA_MAX)) +
   theme_minimal() +
